@@ -1,114 +1,42 @@
-# FocusTrack v2 — Hybrid Dark Premium
-# Author: You & your friend 🚀
-# Description: Smart productivity + focus tracker with custom & shareable tasks
-# Run on Streamlit: https://share.streamlit.io
-
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+import os
 
-st.set_page_config(page_title="FocusTrack v2", page_icon="🌙", layout="wide")
+st.set_page_config(page_title="FocusTrack", layout="centered")
 
-# ---------- Initialize ----------
-if "tasks" not in st.session_state:
-    st.session_state.tasks = {
-        "Study": True,
-        "Workout": True,
-        "Sleep": True,
-        "Gym": True,
-        "Mood": True
-    }
-if "custom_tasks" not in st.session_state:
-    st.session_state.custom_tasks = []
-if "public_tasks" not in st.session_state:
-    st.session_state.public_tasks = list(st.session_state.tasks.keys())
+# Load data
+if os.path.exists("data.csv"):
+    df = pd.read_csv("data.csv")
+else:
+    df = pd.DataFrame(columns=["Task", "Duration (min)", "Date"])
 
-# ---------- Style ----------
-st.markdown("""
-    <style>
-    body {
-        background-color: #0f1117;
-        color: #f0f0f0;
-    }
-    .main {
-        background-color: #0f1117;
-    }
-    div[data-testid="stSidebar"] {
-        background-color: #161a22;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.title("🧠 FocusTrack")
 
-st.title("🌙 FocusTrack v2 — Hybrid Dark Premium")
-st.markdown("Stay consistent. Stay minimal. Share your focus energy ⚡")
+menu = st.sidebar.selectbox("Menu", ["Tracker", "Dashboard"])
 
-# ---------- Add Tasks ----------
-st.subheader("🧩 Your Tasks")
-cols = st.columns(2)
-with cols[0]:
-    for task, enabled in st.session_state.tasks.items():
-        st.session_state.tasks[task] = st.checkbox(task, value=enabled)
+if menu == "Tracker":
+    st.subheader("Track Your Session")
+    task = st.text_input("Task Name")
+    duration = st.number_input("Duration (minutes)", min_value=1, step=1)
+    if st.button("Save"):
+        new_data = pd.DataFrame([[task, duration, pd.Timestamp.now().strftime("%Y-%m-%d")]],
+                                columns=["Task", "Duration (min)", "Date"])
+        df = pd.concat([df, new_data], ignore_index=True)
+        df.to_csv("data.csv", index=False)
+        st.success("Saved successfully!")
 
-with cols[1]:
-    st.markdown("**Add custom tasks:**")
-    new_task = st.text_input("Enter new task name")
-    if st.button("➕ Add Task"):
-        if new_task.strip() != "":
-            st.session_state.custom_tasks.append(new_task.strip())
-            st.success(f"Task '{new_task}' added!")
+elif menu == "Dashboard":
+    st.subheader("Your Productivity Dashboard")
+    if df.empty:
+        st.info("No data yet — start tracking!")
+    else:
+        total_time = df["Duration (min)"].sum()
+        st.metric("Total Focus Time (min)", total_time)
+        st.bar_chart(df.groupby("Date")["Duration (min)"].sum())
+        st.dataframe(df)
 
-if st.session_state.custom_tasks:
-    st.markdown("### Your Custom Tasks")
-    for task in st.session_state.custom_tasks:
-        st.checkbox(task, value=True)
+st.caption("Built with ❤️ using rexrain")
 
-# ---------- Public/Private Options ----------
-st.divider()
-st.subheader("🌍 Visibility Settings")
 
-public_options = []
-all_tasks = list(st.session_state.tasks.keys()) + st.session_state.custom_tasks
 
-for task in all_tasks:
-    checked = st.checkbox(f"Make '{task}' public", value=task in st.session_state.public_tasks)
-    if checked:
-        public_options.append(task)
-
-st.session_state.public_tasks = public_options
-
-# ---------- Save Progress ----------
-st.divider()
-st.subheader("📅 Log Today’s Progress")
-
-if "data" not in st.session_state:
-    st.session_state.data = []
-
-if st.button("Save Progress"):
-    entry = {
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "tasks": [t for t, v in st.session_state.tasks.items() if v],
-        "custom_tasks": st.session_state.custom_tasks,
-        "public": st.session_state.public_tasks
-    }
-    st.session_state.data.append(entry)
-    st.success("Progress saved successfully ✅")
-
-# ---------- View Logs ----------
-if st.session_state.data:
-    st.divider()
-    st.subheader("📊 History")
-    df = pd.DataFrame(st.session_state.data)
-    st.dataframe(df)
-
-# ---------- Share Section ----------
-st.divider()
-st.subheader("🔗 Share Public Focus")
-
-shareable_tasks = ", ".join(st.session_state.public_tasks)
-st.markdown(f"**Your public focus areas:** {shareable_tasks if shareable_tasks else 'None yet'}")
-
-share_link = f"https://share.streamlit.io/yourusername/focustrack-app"
-st.markdown(f"[🌐 View Public Dashboard]({share_link})")
-
-st.caption("Made with ❤️ using Streamlit — FocusTrack v2")
 
