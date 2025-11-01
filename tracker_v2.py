@@ -36,7 +36,3 @@ elif menu == "Dashboard":
         st.dataframe(df)
 
 st.caption("Built with ❤️ using rexrain")
-
-
-
-
